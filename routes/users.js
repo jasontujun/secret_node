@@ -14,22 +14,16 @@ var USER_ERROR_PASSWORD_ERROR = -212;
 /**
  * 检验登陆状态的filter
  */
-router.checkTokenGet = function(req, res, next) {
-    var userId = req.query.uid;
-    var t = req.query.token;
-    if (userId && t && token.getToken(userId) === t) {
-        next();
-    } else {
-        //res.redirect('/login');
-        res.status(500)
-            .set('err', USER_ERROR_TOKEN_CHECK)
-            .send('Check token error! err=' + USER_ERROR_TOKEN_CHECK);
+router.checkToken = function(req, res, next) {
+    var userId;
+    var t;
+    if (req.method === 'GET') {
+        userId = req.query.uid;
+        t = req.query.token;
+    } else if (req.method === 'POST') {
+        userId = req.body.uid;
+        t = req.body.token;
     }
-};
-
-router.checkTokenPost = function(req, res, next) {
-    var userId = req.body.uid;
-    var t = req.body.token;
     if (userId && t && token.getToken(userId) === t) {
         next();
     } else {
@@ -113,7 +107,7 @@ router.get('/logout', decryptor.decrypt, function(req, res, next) {
 /**
  * 更新账号数据。
  */
-router.post('/update', decryptor.decrypt, router.checkTokenPost, function(req, res, next) {
+router.post('/update', decryptor.decrypt, router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var info = {
         description : req.body.description,
@@ -151,7 +145,7 @@ router.get('/search', decryptor.decrypt, function(req, res, next) {
 /**
  * 存活检测。调用此接口会刷新存活时间戳。
  */
-router.get('/alive', decryptor.decrypt, router.checkTokenGet, function(req, res, next) {
+router.get('/alive', decryptor.decrypt, router.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     dao.keepAliveAccount(userId, function(err) {
         if (err) {
@@ -167,7 +161,7 @@ router.get('/alive', decryptor.decrypt, router.checkTokenGet, function(req, res,
 /**
  * 账号变成死亡状态。
  */
-router.get('/kill', decryptor.decrypt, router.checkTokenGet, function(req, res, next) {
+router.get('/kill', decryptor.decrypt, router.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     dao.killAccount(userId, function(err) {
         if (err) {
@@ -183,7 +177,7 @@ router.get('/kill', decryptor.decrypt, router.checkTokenGet, function(req, res, 
 /**
  * 销毁账号及账号相关内容。
  */
-router.get('/destroy', decryptor.decrypt, router.checkTokenGet, function(req, res, next) {
+router.get('/destroy', decryptor.decrypt, router.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     dao.destroyAccount(userId, function(err) {
         if (err) {
