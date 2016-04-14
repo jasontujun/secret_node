@@ -136,7 +136,17 @@ router.get('/detail', decryptor.decrypt, users.checkToken, function(req, res, ne
 });
 
 /**
- * 添加secret
+ * 添加secret。
+ * 如果参数surl字段不为空，则说明资源url已经存在，不需要后续上传资源文件，只返回：
+ * {
+ *      sid: secretId
+ *  }
+ * 如果参数surl字段为空，则说明后续要上传资源文件，会返回：
+ * {
+ *      sid: secretId，
+ *      dfs: dfs供应商类型号(1=qiniu),
+ *      up: 上传token凭证
+ *  }
  */
 router.post('/secret/add', decryptor.decrypt, users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
@@ -145,16 +155,27 @@ router.post('/secret/add', decryptor.decrypt, users.checkToken, function(req, re
         url : req.body.surl,
         size : req.body.ss,
         width : req.body.sw,
-        height : req.body.sh
+        height : req.body.sh,
+        mime : req.body.mime
     };
-    dao.addSecretToMemory(memoryId, userId, secret, function (err, secretId) {
+    dao.addSecretToMemory(memoryId, userId, secret, function (err, secretId, dfsType, uploadToken) {
         if (err) {
             res.status(500)
                 .set('err', err)
                 .send('error! err=' + err);
             return;
         }
-        res.send(JSON.stringify({sid : secretId}));
+        if (dfsType) {
+            res.send(JSON.stringify({
+                sid: secretId,
+                dfs: dfsType,
+                up: uploadToken
+            }));
+        } else {
+            res.send(JSON.stringify({
+                sid: secretId
+            }));
+        }
     });
 });
 
@@ -192,6 +213,50 @@ router.post('/secret/order', decryptor.decrypt, users.checkToken, function(req, 
         }
         res.send('success!');
     });
+});
+
+/**
+ * 获取secret资源上传的token。
+ * 主要用于上传过程中断点续传的情形，重新获取上传token。
+ */
+router.get('/secret/uptoken', function(req, res, next) {
+    var userId = req.query.uid;
+    var memoryId = req.query.mid;
+    var secretId = req.query.sid;
+    dao.getSecretUploadToken(memoryId, userId, secretId, function(err, token) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.send(JSON.stringify({token : token}));
+    });
+});
+
+/**
+ * 获取文件下载的url。
+ */
+router.get('/secret/downurl', function(req, res, next) {
+    var memoryId = req.query.mid;
+    var secretId = req.query.sid;
+    dao.getSecretDownloadUrl(memoryId, secretId, function(err, url) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.send(JSON.stringify({url : url}));
+    });
+});
+
+/**
+ * TODO dfs供应商的回调接口。
+ */
+router.get('/secret/callback', function(req, res, next) {
+    var sid = req.query.sid;
+    var dfs = req.query.dfs;
 });
 
 module.exports = router;
