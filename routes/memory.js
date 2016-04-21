@@ -4,13 +4,12 @@
 var express = require('express');
 var dao = require('../lib/dao');
 var users = require('./users');
-var decryptor = require('./decryptor');
 var router = express.Router();
 
 /**
  * 创建memory
  */
-router.post('/add', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.post('/add', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var name = req.body.name;
     var happenTime = req.body.ha;
@@ -28,7 +27,7 @@ router.post('/add', decryptor.decrypt, users.checkToken, function(req, res, next
 /**
  * 删除memory
  */
-router.get('/delete', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.get('/delete', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     var memoryId = req.query.mid;
     dao.deleteMemory(memoryId, userId, function (err) {
@@ -45,7 +44,7 @@ router.get('/delete', decryptor.decrypt, users.checkToken, function(req, res, ne
 /**
  * 发送memory
  */
-router.post('/send', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.post('/send', users.checkToken, function(req, res, next) {
     var senderId = req.body.uid;
     var memoryId = req.body.mid;
     var receiverId = req.body.rid;
@@ -69,7 +68,7 @@ router.post('/send', decryptor.decrypt, users.checkToken, function(req, res, nex
 /**
  * 确认接收memory
  */
-router.post('/receive', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.post('/receive', users.checkToken, function(req, res, next) {
     var boxId = req.body.bid;
     var receiverId = req.body.uid;
     var answer = req.body.answer;
@@ -89,7 +88,7 @@ router.post('/receive', decryptor.decrypt, users.checkToken, function(req, res, 
 /**
  * 获取用户待接收的Memory列表
  */
-router.get('/inbox', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.get('/inbox', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     dao.viewMemoryBox(userId, function (err, boxItems) {
             if (err) {
@@ -105,7 +104,7 @@ router.get('/inbox', decryptor.decrypt, users.checkToken, function(req, res, nex
 /**
  * 获取用户所有的Memory
  */
-router.get('/list', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.get('/list', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     dao.getMemoryList(userId, function (err, memorys) {
         if (err) {
@@ -121,7 +120,7 @@ router.get('/list', decryptor.decrypt, users.checkToken, function(req, res, next
 /**
  * 获取单个Memory的详情(其所包含的secret列表)
  */
-router.get('/detail', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.get('/detail', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     var memoryId = req.query.mid;
     dao.getMemoryDetail(memoryId, userId, function (err, memory) {
@@ -148,7 +147,7 @@ router.get('/detail', decryptor.decrypt, users.checkToken, function(req, res, ne
  *      up: 上传token凭证
  *  }
  */
-router.post('/secret/add', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.post('/secret/add', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var memoryId = req.body.mid;
     var secret = {
@@ -182,7 +181,7 @@ router.post('/secret/add', decryptor.decrypt, users.checkToken, function(req, re
 /**
  * 删除secret
  */
-router.get('/secret/delete', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.get('/secret/delete', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
     var memoryId = req.query.mid;
     var secretId = req.query.sid;
@@ -200,7 +199,7 @@ router.get('/secret/delete', decryptor.decrypt, users.checkToken, function(req, 
 /**
  * 调整secret顺序
  */
-router.post('/secret/order', decryptor.decrypt, users.checkToken, function(req, res, next) {
+router.post('/secret/order', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var memoryId = req.body.mid;
     var order = req.body.order;
