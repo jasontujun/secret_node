@@ -52,8 +52,10 @@ router.post('/send', users.checkToken, function(req, res, next) {
     var receiverDescription = req.body.rdes;
     var question = req.body.question;
     var answer = req.body.answer;
-    dao.sendMemory(memoryId, senderId, receiverId,
-        receiverName, receiverDescription, question, answer,
+    var scope = req.body.scope;
+    var takeTime = req.body.take;
+    dao.sendMemory(memoryId, senderId, receiverId, receiverName,
+        receiverDescription, question, answer, scope, takeTime,
         function (err, boxId) {
             if (err) {
                 res.status(500)
@@ -86,19 +88,29 @@ router.post('/receive', users.checkToken, function(req, res, next) {
 });
 
 /**
- * 获取用户待接收的Memory列表
+ * 获取用户待接收的Memory列表。
+ * 包括私密范围Memory和公开范围Memory。
+ * 返回{ pa:私密范围Memory, pb:公开范围Memory}
  */
 router.get('/inbox', users.checkToken, function(req, res, next) {
     var userId = req.query.uid;
-    dao.viewMemoryBox(userId, function (err, boxItems) {
+    dao.viewMemoryBox(userId, dao.SCOPE.PRIVATE, function (err, privateBoxItems) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        dao.viewMemoryBox(userId, dao.SCOPE.PUBLIC, function (err, publicBoxItems) {
             if (err) {
                 res.status(500)
                     .set('err', err)
                     .send('error! err=' + err);
                 return;
             }
-            res.send(JSON.stringify(boxItems));
+            res.send(JSON.stringify({pa: privateBoxItems, pb: publicBoxItems}));
         });
+    });
 });
 
 /**

@@ -137,7 +137,7 @@ router.get('/logout', function(req, res, next) {
 router.post('/update', router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var info = {
-        description : req.body.description,
+        description : req.body.des,
         born_time : req.body.born_time,
         email : req.body.email
     };
@@ -155,10 +155,11 @@ router.post('/update', router.checkToken, function(req, res, next) {
 /**
  * 搜索账号。
  */
-router.get('/search', function(req, res, next) {
-    var name = req.query.name;
-    var description = req.query.description;
-    dao.searchAccount(name, description, false, dao.USER_STATE.ACTIVE,
+router.post('/search', function(req, res, next) {
+    var name = req.body.name;
+    var description = req.body.des;
+    var strict = req.body.strict;
+    dao.searchAccount(name, description, strict, dao.USER_STATE.ACTIVE,
         function(err, result) {
             if (err) {
                 res.status(500)
@@ -166,25 +167,10 @@ router.get('/search', function(req, res, next) {
                     .send('error! err=' + err);
                 return;
             }
-            res.send(JSON.stringify(result));
+            res.status(200).send(JSON.stringify(result));
         });
 });
 
-/**
- * 存活检测。调用此接口会刷新存活时间戳。
- */
-router.get('/alive', router.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
-    dao.keepAliveAccount(userId, function(err) {
-        if (err) {
-            res.status(500)
-                .set('err', err)
-                .send('error! err=' + err);
-            return;
-        }
-        res.send('success!');
-    });
-});
 
 /**
  * 销毁账号及账号相关内容。
@@ -207,18 +193,20 @@ router.get('/destroy', router.checkToken, function(req, res, next) {
 /**
  * 根据用户名和描述，搜索种子账号。
  */
-router.get('/seed/search', function(req, res, next) {
-    var name = req.query.name;
-    var description = req.query.description;
-    dao.searchSeedAccount(name, description, function(err, result) {
-        if (err) {
-            res.status(500)
-                .set('err', err)
-                .send('error! err=' + err);
-            return;
-        }
-        res.send(JSON.stringify(result));
-    });
+router.post('/seed/search', function(req, res, next) {
+    var name = req.body.name;
+    var description = req.body.des;
+    var strict = req.body.strict;
+    dao.searchAccount(name, description, strict, dao.USER_STATE.SEED,
+        function(err, result) {
+            if (err) {
+                res.status(500)
+                    .set('err', err)
+                    .send('error! err=' + err);
+                return;
+            }
+            res.status(200).send(JSON.stringify(result));
+        });
 });
 
 /**
@@ -233,7 +221,7 @@ router.get('/seed/detail', function(req, res, next) {
                 .send('error! err=' + err);
             return;
         }
-        res.send('success! result=' + result);
+        res.status(200).send(JSON.stringify(result));
     });
 });
 
@@ -243,7 +231,7 @@ router.get('/seed/detail', function(req, res, next) {
  */
 router.post('/seed/create', function(req, res, next) {
     var name = req.body.name;
-    var description = req.body.description;
+    var description = req.body.des;
     var ancestorId = req.body.aid;
     var password = req.body.pw;
     dao.createSeedAccount(name, description, ancestorId, password,
@@ -254,7 +242,7 @@ router.post('/seed/create', function(req, res, next) {
                     .send('error! err=' + err);
                 return;
             }
-            res.send(JSON.stringify({uid : result}));
+            res.status(200).send(JSON.stringify({uid : result}));
         });
 });
 
@@ -295,12 +283,16 @@ router.post('/seed/activate', function(req, res, next) {
             return;
         }
         // 激活成功后自动登录
-        login(userId, password, null, function(err, token, user) {
+        login(userId, cipher.md5(password, userId), null, function(err, token, user) {
             if (err) {
                 res.status(200).send(JSON.stringify({}));// 如果自动登录失败，返回空对象
                 return;
             }
-            res.status(200).send(JSON.stringify({token : token, user : user}));
+            // 自动登录成功，领取Memory
+            dao.receiveMemory(boxId, userId, answer, salt,
+                function (err, memoryId) {
+                    res.status(200).send(JSON.stringify({token : token, user : user}));
+                });
         });
     });
 });
