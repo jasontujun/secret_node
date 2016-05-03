@@ -138,7 +138,7 @@ router.post('/update', router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var info = {
         description : req.body.des,
-        born_time : req.body.born_time,
+        born_time : req.body.btime,
         email : req.body.email
     };
     dao.updateAccount(userId, info, function(err) {
