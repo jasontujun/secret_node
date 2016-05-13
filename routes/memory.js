@@ -13,14 +13,14 @@ router.post('/add', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var name = req.body.name;
     var happenTime = req.body.ha;
-    dao.addMemory(name, userId, happenTime, function (err, memoryId) {
+    dao.addMemory(name, userId, happenTime, function (err, memory) {
         if (err) {
             res.status(500)
                 .set('err', err)
                 .send('error! err=' + err);
             return;
         }
-        res.send(JSON.stringify({mid : memoryId}));
+        res.send(JSON.stringify(memory));
     });
 });
 
