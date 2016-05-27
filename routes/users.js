@@ -3,6 +3,7 @@ var dao = require('../lib/dao');
 var token = require('../lib/token');
 var cipher = require('../lib/cipher');
 var errCode = require('../lib/ecode');
+var dfs = require('../lib/dfs');
 var router = express.Router();
 
 
@@ -148,7 +149,7 @@ router.post('/update', router.checkToken, function(req, res, next) {
                 .send('error! err=' + err);
             return;
         }
-        res.send('success!');
+        res.status(200).send('success!');
     });
 });
 
@@ -184,8 +185,21 @@ router.get('/destroy', router.checkToken, function(req, res, next) {
                 .send('error! err=' + err);
             return;
         }
-        res.send('success!');
+        res.status(200).send('success!');
     });
+});
+
+
+router.post('/head/uptoken', router.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var token = dfs.genPublicUploadToken(dfs.dfsType.qiniu, userId);
+    if (token) {
+        res.status(200).send(JSON.stringify({up: token}));
+    } else {
+        res.status(500)
+            .set('err', errCode.COMMON_PARAM_ILLEGAL)
+            .send('error! err=' + err);
+    }
 });
 
 
@@ -261,7 +275,7 @@ router.post('/seed/answer', function(req, res, next) {
                 .send('error! err=' + err);
             return;
         }
-        res.send('success!');
+        res.status(200).send('success!');
     });
 });
 

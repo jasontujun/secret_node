@@ -27,9 +27,9 @@ router.post('/add', users.checkToken, function(req, res, next) {
 /**
  * 删除memory
  */
-router.get('/delete', users.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
-    var memoryId = req.query.mid;
+router.post('/delete', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
     dao.deleteMemory(memoryId, userId, function (err) {
         if (err) {
             res.status(500)
@@ -92,8 +92,8 @@ router.post('/receive', users.checkToken, function(req, res, next) {
  * 包括私密范围Memory和公开范围Memory。
  * 返回{ pa:私密范围Memory, pb:公开范围Memory}
  */
-router.get('/inbox', users.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
+router.post('/inbox', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
     dao.viewMemoryBox(userId, dao.SCOPE.PRIVATE, function (err, privateBoxItems) {
         if (err) {
             res.status(500)
@@ -116,8 +116,8 @@ router.get('/inbox', users.checkToken, function(req, res, next) {
 /**
  * 获取用户所有的Memory
  */
-router.get('/list', users.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
+router.post('/list', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
     dao.getMemoryList(userId, function (err, memorys) {
         if (err) {
             res.status(500)
@@ -132,9 +132,9 @@ router.get('/list', users.checkToken, function(req, res, next) {
 /**
  * 获取单个Memory的详情(其所包含的secret列表)
  */
-router.get('/detail', users.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
-    var memoryId = req.query.mid;
+router.post('/detail', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
     dao.getMemoryDetail(memoryId, userId, function (err, memory) {
         if (err) {
             res.status(500)
@@ -169,34 +169,36 @@ router.post('/secret/add', users.checkToken, function(req, res, next) {
         height : req.body.sh,
         mime : req.body.mime
     };
-    dao.addSecretToMemory(memoryId, userId, secret, function (err, secretId, dfsType, uploadToken) {
-        if (err) {
-            res.status(500)
-                .set('err', err)
-                .send('error! err=' + err);
-            return;
-        }
-        if (dfsType) {
-            res.send(JSON.stringify({
-                sid: secretId,
-                dfs: dfsType,
-                up: uploadToken
-            }));
-        } else {
-            res.send(JSON.stringify({
-                sid: secretId
-            }));
-        }
-    });
+    dao.addSecretToMemory(memoryId, userId, secret,
+        function (err, secretId, dfsType, key, token) {
+            if (err) {
+                res.status(500)
+                    .set('err', err)
+                    .send('error! err=' + err);
+                return;
+            }
+            if (dfsType) {
+                res.send(JSON.stringify({
+                    sid: secretId,
+                    dfs: dfsType,
+                    key : key,
+                    token: token
+                }));
+            } else {
+                res.send(JSON.stringify({
+                    sid: secretId
+                }));
+            }
+        });
 });
 
 /**
  * 删除secret
  */
-router.get('/secret/delete', users.checkToken, function(req, res, next) {
-    var userId = req.query.uid;
-    var memoryId = req.query.mid;
-    var secretId = req.query.sid;
+router.post('/secret/delete', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    var secretId = req.body.sid;
     dao.addSecretToMemory(memoryId, userId, secretId, function (err) {
         if (err) {
             res.status(500)
@@ -230,27 +232,29 @@ router.post('/secret/order', users.checkToken, function(req, res, next) {
  * 获取secret资源上传的token。
  * 主要用于上传过程中断点续传的情形，重新获取上传token。
  */
-router.get('/secret/uptoken', function(req, res, next) {
-    var userId = req.query.uid;
-    var memoryId = req.query.mid;
-    var secretId = req.query.sid;
-    dao.getSecretUploadToken(memoryId, userId, secretId, function(err, token) {
+router.post('/secret/uptoken', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    var secretId = req.body.sid;
+    dao.getSecretUploadToken(memoryId, userId, secretId, function(err, token, key) {
         if (err) {
             res.status(500)
                 .set('err', err)
                 .send('error! err=' + err);
             return;
         }
-        res.send(JSON.stringify({token : token}));
+        res.send(JSON.stringify({token : token, key : key}));
     });
 });
+
+
 
 /**
  * 获取文件下载的url。
  */
-router.get('/secret/downurl', function(req, res, next) {
-    var memoryId = req.query.mid;
-    var secretId = req.query.sid;
+router.post('/secret/downurl', users.checkToken, function(req, res, next) {
+    var memoryId = req.body.mid;
+    var secretId = req.body.sid;
     dao.getSecretDownloadUrl(memoryId, secretId, function(err, url) {
         if (err) {
             res.status(500)
@@ -263,11 +267,23 @@ router.get('/secret/downurl', function(req, res, next) {
 });
 
 /**
- * TODO dfs供应商的回调接口。
+ * dfs供应商的回调接口。
  */
-router.get('/secret/callback', function(req, res, next) {
-    var sid = req.query.sid;
-    var dfs = req.query.dfs;
+router.post('/secret/callback', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    var secretId = req.body.sid;
+    var key = req.body.key;
+    var dfs = req.body.dfs;
+    dao.secretUploadFinish(secretId, memoryId, userId, dfs, key, function(err) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.send('success!');
+    })
 });
 
 module.exports = router;
