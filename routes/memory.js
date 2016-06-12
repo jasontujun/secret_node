@@ -44,7 +44,7 @@ router.post('/delete', users.checkToken, function(req, res, next) {
 /**
  * 发送memory
  */
-router.post('/send', users.checkToken, function(req, res, next) {
+router.post('/post', users.checkToken, function(req, res, next) {
     var senderId = req.body.uid;
     var memoryId = req.body.mid;
     var receiverId = req.body.rid;
@@ -53,17 +53,17 @@ router.post('/send', users.checkToken, function(req, res, next) {
     var question = req.body.question;
     var answer = req.body.answer;
     var scope = req.body.scope;
-    var takeTime = req.body.take;
-    dao.sendMemory(memoryId, senderId, receiverId, receiverName,
-        receiverDescription, question, answer, scope, takeTime,
-        function (err, boxId) {
+    var receiveTime = req.body.future ? Number(req.body.future) : 0;
+    dao.postMemory(memoryId, senderId, receiverId, receiverName,
+        receiverDescription, question, answer, scope, receiveTime,
+        function (err, giftId) {
             if (err) {
                 res.status(500)
                     .set('err', err)
                     .send('error! err=' + err);
                 return;
             }
-            res.send(JSON.stringify({bid : boxId}));
+            res.send(JSON.stringify({gid : giftId}));
         });
 });
 
@@ -71,11 +71,11 @@ router.post('/send', users.checkToken, function(req, res, next) {
  * 确认接收memory
  */
 router.post('/receive', users.checkToken, function(req, res, next) {
-    var boxId = req.body.bid;
+    var giftId = req.body.gid;
     var receiverId = req.body.uid;
     var answer = req.body.answer;
     var salt = req.body.sa;
-    dao.receiveMemory(boxId, receiverId, answer, salt,
+    dao.receiveMemory(giftId, receiverId, answer, salt,
         function (err, memoryId) {
             if (err) {
                 res.status(500)
@@ -92,23 +92,23 @@ router.post('/receive', users.checkToken, function(req, res, next) {
  * 包括私密范围Memory和公开范围Memory。
  * 返回{ pa:私密范围Memory, pb:公开范围Memory}
  */
-router.post('/inbox', users.checkToken, function(req, res, next) {
+router.post('/in', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
-    dao.viewMemoryBox(userId, dao.SCOPE.PRIVATE, function (err, privateBoxItems) {
+    dao.memoryInGift(userId, dao.SCOPE.PRIVATE, function (err, privateGiftItems) {
         if (err) {
             res.status(500)
                 .set('err', err)
                 .send('error! err=' + err);
             return;
         }
-        dao.viewMemoryBox(userId, dao.SCOPE.PUBLIC, function (err, publicBoxItems) {
+        dao.memoryInGift(userId, dao.SCOPE.PUBLIC, function (err, publicGiftItems) {
             if (err) {
                 res.status(500)
                     .set('err', err)
                     .send('error! err=' + err);
                 return;
             }
-            res.send(JSON.stringify({pa: privateBoxItems, pb: publicBoxItems}));
+            res.send(JSON.stringify({pa: privateGiftItems, pb: publicGiftItems}));
         });
     });
 });
@@ -130,65 +130,68 @@ router.post('/list', users.checkToken, function(req, res, next) {
 });
 
 /**
- * 获取单个Memory的详情(其所包含的secret列表)
+ * 获取单个Memory的详情。
+ * 如果获取成功，返回结果{
+ *      secrets : [...],// secrets内容
+ *      gifts : [...]// 赠送记录
+ * }
  */
 router.post('/detail', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var memoryId = req.body.mid;
-    dao.getMemoryDetail(memoryId, userId, function (err, memory) {
-        if (err) {
-            res.status(500)
-                .set('err', err)
-                .send('error! err=' + err);
-            return;
-        }
-        res.send(JSON.stringify(memory));
-    });
-});
-
-/**
- * 添加secret。
- * 如果参数surl字段不为空，则说明资源url已经存在，不需要后续上传资源文件，只返回：
- * {
- *      sid: secretId
- *  }
- * 如果参数surl字段为空，则说明后续要上传资源文件，会返回：
- * {
- *      sid: secretId，
- *      dfs: dfs供应商类型号(1=qiniu),
- *      up: 上传token凭证
- *  }
- */
-router.post('/secret/add', users.checkToken, function(req, res, next) {
-    var userId = req.body.uid;
-    var memoryId = req.body.mid;
-    var secret = {
-        url : req.body.surl,
-        size : req.body.ss,
-        width : req.body.sw,
-        height : req.body.sh,
-        mime : req.body.mime
-    };
-    dao.addSecretToMemory(memoryId, userId, secret,
-        function (err, secretId, dfsType, key, token) {
+    dao.getMemoryDetail(memoryId, userId,
+        function (err, secrets, gifts) {
             if (err) {
                 res.status(500)
                     .set('err', err)
                     .send('error! err=' + err);
                 return;
             }
-            if (dfsType) {
-                res.send(JSON.stringify({
-                    sid: secretId,
-                    dfs: dfsType,
-                    key : key,
-                    token: token
-                }));
-            } else {
-                res.send(JSON.stringify({
-                    sid: secretId
-                }));
+            var detail = {};
+            detail.secrets = secrets;
+            if (gifts) {
+                detail.gifts = gifts;
             }
+            res.send(JSON.stringify(detail));
+        });
+});
+
+/**
+ * 批量添加secret。
+ * secret字段为json数组字符串。
+ * secret = [{
+        url : 第三方公开资源文件的url,
+        order : 在所属memory中的索引位置,
+        size : 资源文件大小,
+        width : 资源文件宽度(主要针对图片类型),
+        height : 资源文件高度(主要针对图片类型),
+        mime : 资源文件的mime类型
+    }, ...]
+ * 如果secret对象的url字段不为空，则说明资源url已经存在，不需要后续上传资源文件，只返回：
+ * {
+ *      sid: secretId
+ *  }
+ * 如果secret对象的url字段为空，则说明后续要上传资源文件，会返回：
+ * {
+ *      sid: secretId，
+ *      dfs: dfs供应商类型号(1=qiniu),
+ *      up: 上传token凭证
+ *      key: 上传文件的key值
+ *  }
+ */
+router.post('/secret/add', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    var secretStr = req.body.secret;
+    dao.addSecretToMemory(memoryId, userId, secretStr,
+        function (err, list) {
+            if (err) {
+                res.status(500)
+                    .set('err', err)
+                    .send('error! err=' + err);
+                return;
+            }
+            res.send(JSON.stringify(list));
         });
 });
 
@@ -199,7 +202,7 @@ router.post('/secret/delete', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var memoryId = req.body.mid;
     var secretId = req.body.sid;
-    dao.addSecretToMemory(memoryId, userId, secretId, function (err) {
+    dao.deleteSecretFromMemory(memoryId, userId, secretId, function (err) {
         if (err) {
             res.status(500)
                 .set('err', err)
@@ -274,7 +277,7 @@ router.post('/secret/callback', users.checkToken, function(req, res, next) {
     var memoryId = req.body.mid;
     var secretId = req.body.sid;
     var key = req.body.key;
-    var dfs = req.body.dfs;
+    var dfs = Number(req.body.dfs);
     dao.secretUploadFinish(secretId, memoryId, userId, dfs, key, function(err) {
         if (err) {
             res.status(500)

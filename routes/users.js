@@ -113,9 +113,9 @@ router.post('/login', function(req, res, next) {
 /**
  * 登出账号。
  */
-router.get('/logout', function(req, res, next) {
-    var userId = req.query.uid;
-    var t = req.query.token;
+router.post('/logout', function(req, res, next) {
+    var userId = req.body.uid;
+    var t = req.body.token;
     if (!userId || !t){
         res.status(500)
             .set('err', errCode.COMMON_PARAM_ILLEGAL)
@@ -189,6 +189,21 @@ router.get('/destroy', router.checkToken, function(req, res, next) {
     });
 });
 
+/**
+ * 获取好友列表。
+ */
+router.post('/friends', router.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    dao.getFriendAccount(userId, function(err, result) {
+            if (err) {
+                res.status(500)
+                    .set('err', err)
+                    .send('error! err=' + err);
+                return;
+            }
+            res.status(200).send(JSON.stringify(result));
+        });
+});
 
 router.post('/head/uptoken', router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
@@ -201,8 +216,6 @@ router.post('/head/uptoken', router.checkToken, function(req, res, next) {
             .send('error! err=' + err);
     }
 });
-
-
 
 /**
  * 根据用户名和描述，搜索种子账号。
@@ -265,10 +278,10 @@ router.post('/seed/create', function(req, res, next) {
  */
 router.post('/seed/answer', function(req, res, next) {
     var userId = req.body.uid;
-    var boxId = req.body.bid;
+    var giftId = req.body.gid;
     var answer = req.body.answer;
     var salt = req.body.sa;
-    dao.answerSeedAccount(userId, boxId, answer, salt, function(err) {
+    dao.answerSeedAccount(userId, giftId, answer, salt, function(err) {
         if (err) {
             res.status(500)
                 .set('err', err)
@@ -284,12 +297,12 @@ router.post('/seed/answer', function(req, res, next) {
  */
 router.post('/seed/activate', function(req, res, next) {
     var userId = req.body.uid;
-    var boxId = req.body.bid;
+    var giftId = req.body.gid;
     var password = req.body.password;
     var answer = req.body.answer;
     var salt = req.body.sa;
     var email = req.body.email;
-    dao.activateAccount(userId, boxId, answer, salt, password, email, function(err) {
+    dao.activateAccount(userId, giftId, answer, salt, password, email, function(err) {
         if (err) {
             res.status(500)
                 .set('err', err)
@@ -303,7 +316,7 @@ router.post('/seed/activate', function(req, res, next) {
                 return;
             }
             // 自动登录成功，领取Memory
-            dao.receiveMemory(boxId, userId, answer, salt,
+            dao.receiveMemory(giftId, userId, answer, salt,
                 function (err, memoryId) {
                     res.status(200).send(JSON.stringify({token : token, user : user}));
                 });
