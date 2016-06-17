@@ -88,20 +88,37 @@ router.post('/receive', users.checkToken, function(req, res, next) {
 });
 
 /**
- * 获取用户待接收的Memory列表。
- * 包括私密范围Memory和公开范围Memory。
- * 返回{ pa:私密范围Memory, pb:公开范围Memory}
+ * 拒绝memory
  */
-router.post('/in', users.checkToken, function(req, res, next) {
-    var userId = req.body.uid;
-    dao.memoryInGift(userId, dao.SCOPE.PRIVATE, function (err, privateGiftItems) {
+router.post('/reject', users.checkToken, function(req, res, next) {
+    var giftId = req.body.gid;
+    var receiverId = req.body.uid;
+    dao.rejectMemory(giftId, receiverId, function (err) {
         if (err) {
             res.status(500)
                 .set('err', err)
                 .send('error! err=' + err);
             return;
         }
-        dao.memoryInGift(userId, dao.SCOPE.PUBLIC, function (err, publicGiftItems) {
+        res.send('success!');
+    });
+});
+
+/**
+ * 获取用户待接收的Memory列表。
+ * 包括私密范围Memory和公开范围Memory。
+ * 返回{ pa:私密范围Memory, pb:公开范围Memory}
+ */
+router.post('/in', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    dao.getMemoryGift(userId, dao.SCOPE.PRIVATE, function (err, privateGiftItems) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        dao.getMemoryGift(userId, dao.SCOPE.PUBLIC, function (err, publicGiftItems) {
             if (err) {
                 res.status(500)
                     .set('err', err)
