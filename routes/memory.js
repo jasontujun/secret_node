@@ -7,13 +7,42 @@ var users = require('./users');
 var router = express.Router();
 
 /**
+ * 获取Memory封面图片的上传token。
+ * 返回：
+ * {
+ *      dfs: dfs供应商类型号(76=qiniu),
+ *      token: 上传token凭证
+ *      key: 上传文件的key值
+ *  }
+ */
+router.post('/cover/uptoken', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    dao.uploadMemoryCover(userId, memoryId, function (err, dfsType, key, token) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.send(JSON.stringify({dfs : dfsType, token : token, key : key}));
+    });
+});
+
+/**
  * 创建memory
  */
 router.post('/add', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
-    var name = req.body.name;
-    var happenTime = req.body.ha;
-    dao.addMemory(name, userId, happenTime, function (err, memory) {
+    var memory = {
+        name : req.body.name,
+        happen_start_time : req.body.hstart,
+        happen_end_time : req.body.hend,
+        cover_url : req.body.curl,
+        cover_width : req.body.cw,
+        cover_height : req.body.ch
+    };
+    dao.addMemory(userId, memory, function (err, memory) {
         if (err) {
             res.status(500)
                 .set('err', err)
@@ -42,6 +71,36 @@ router.post('/delete', users.checkToken, function(req, res, next) {
 });
 
 /**
+ * 更新Memory数据。可更新字段包括：
+ *  name,
+ *  cover_url + cover_width + cover_height,
+ *  happen_start_time + happen_end_time,
+ *  heritage
+ */
+router.post('/update', users.checkToken, function(req, res, next) {
+    var userId = req.body.uid;
+    var memoryId = req.body.mid;
+    var info = {
+        name : req.body.name,
+        happen_start_time : req.body.hstart,
+        happen_end_time : req.body.hend,
+        cover_url : req.body.curl,
+        cover_width : req.body.cw,
+        cover_height : req.body.ch,
+        heritage : req.body.heritage
+    };
+    dao.updateMemory(userId, memoryId, info, function(err) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.status(200).send('success!');
+    });
+});
+
+/**
  * 发送memory
  */
 router.post('/post', users.checkToken, function(req, res, next) {
@@ -53,7 +112,7 @@ router.post('/post', users.checkToken, function(req, res, next) {
     var question = req.body.question;
     var answer = req.body.answer;
     var scope = req.body.scope;
-    var receiveTime = req.body.future ? Number(req.body.future) : 0;
+    var receiveTime = req.body.future;
     dao.postMemory(memoryId, senderId, receiverId, receiverName,
         receiverDescription, question, answer, scope, receiveTime,
         function (err, giftId) {
@@ -131,7 +190,7 @@ router.post('/in', users.checkToken, function(req, res, next) {
 });
 
 /**
- * 获取用户所有的Memory
+ * 获取用户所拥有的Memory列表(不包括待接收的)。
  */
 router.post('/list', users.checkToken, function(req, res, next) {
     var userId = req.body.uid;
@@ -191,8 +250,8 @@ router.post('/detail', users.checkToken, function(req, res, next) {
  * 如果secret对象的url字段为空，则说明后续要上传资源文件，会返回：
  * {
  *      sid: secretId，
- *      dfs: dfs供应商类型号(1=qiniu),
- *      up: 上传token凭证
+ *      dfs: dfs供应商类型号(76=qiniu),
+ *      token: 上传token凭证
  *      key: 上传文件的key值
  *  }
  */
@@ -294,7 +353,7 @@ router.post('/secret/callback', users.checkToken, function(req, res, next) {
     var memoryId = req.body.mid;
     var secretId = req.body.sid;
     var key = req.body.key;
-    var dfs = Number(req.body.dfs);
+    var dfs = req.body.dfs;
     dao.secretUploadFinish(secretId, memoryId, userId, dfs, key, function(err) {
         if (err) {
             res.status(500)

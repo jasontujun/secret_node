@@ -133,14 +133,19 @@ router.post('/logout', function(req, res, next) {
 });
 
 /**
- * 更新账号数据。
+ * 更新账号数据。可更新字段包括：
+ *  description,
+ *  born_time,
+ *  email,
+ *  heritage
  */
 router.post('/update', router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
     var info = {
         description : req.body.des,
         born_time : req.body.btime,
-        email : req.body.email
+        email : req.body.email,
+        heritage : req.body.heritage
     };
     dao.updateAccount(userId, info, function(err) {
         if (err) {
@@ -207,9 +212,10 @@ router.post('/friends', router.checkToken, function(req, res, next) {
 
 router.post('/head/uptoken', router.checkToken, function(req, res, next) {
     var userId = req.body.uid;
-    var token = dfs.genPublicUploadToken(dfs.dfsType.qiniu, userId);
+    var dfsType = dfs.getDefaultDfsType();
+    var token = dfs.genPublicUploadToken(dfsType, userId);
     if (token) {
-        res.status(200).send(JSON.stringify({up: token}));
+        res.status(200).send(JSON.stringify({dfs : dfsType, token: token, key : userId}));
     } else {
         res.status(500)
             .set('err', errCode.COMMON_PARAM_ILLEGAL)
