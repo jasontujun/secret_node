@@ -147,12 +147,29 @@ router.post('/receive', users.checkToken, function(req, res, next) {
 });
 
 /**
- * 拒绝memory
+ * 接收者拒绝memory
  */
 router.post('/reject', users.checkToken, function(req, res, next) {
     var giftId = req.body.gid;
     var receiverId = req.body.uid;
     dao.rejectMemory(giftId, receiverId, function (err) {
+        if (err) {
+            res.status(500)
+                .set('err', err)
+                .send('error! err=' + err);
+            return;
+        }
+        res.send('success!');
+    });
+});
+
+/**
+ * 赠送者撤销memory
+ */
+router.post('/cancel', users.checkToken, function(req, res, next) {
+    var giftId = req.body.gid;
+    var senderId = req.body.uid;
+    dao.cancelMemory(giftId, senderId, function (err) {
         if (err) {
             res.status(500)
                 .set('err', err)
