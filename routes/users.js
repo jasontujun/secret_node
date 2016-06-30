@@ -159,7 +159,7 @@ router.post('/update', router.checkToken, function(req, res, next) {
 });
 
 /**
- * 搜索账号。
+ * 搜索活跃账号。
  */
 router.post('/search', function(req, res, next) {
     var name = req.body.name;
@@ -177,6 +177,24 @@ router.post('/search', function(req, res, next) {
         });
 });
 
+/**
+ * 搜索所有账号(种子，活跃和死亡账号)。
+ */
+router.post('/all/search', function(req, res, next) {
+    var name = req.body.name;
+    var description = req.body.des;
+    var strict = req.body.strict;
+    dao.searchAccount(name, description, strict, -1,
+        function(err, result) {
+            if (err) {
+                res.status(500)
+                    .set('err', err)
+                    .send('error! err=' + err);
+                return;
+            }
+            res.status(200).send(JSON.stringify(result));
+        });
+});
 
 /**
  * 销毁账号及账号相关内容。
