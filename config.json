@@ -1,4 +1,6 @@
 {
+  "port": 8080,
+
   "dfsPublicDomain" : "http://o76ab22vz.bkt.clouddn.com/",
   "dfsSecretDomain" : "http://o776tvrjh.bkt.clouddn.com/",
   "dfsSecretBucket" : "secretmemory-secret",
@@ -13,7 +15,7 @@
   "dbHost" : "localhost",
   "dbPort" : 3306,
   "dbUser" : "root",
-  "dbPassword" : "qazsedcft",
+  "dbPassword" : "qazsedcft123",
   "dbDatabase" : "sm",
 
   "userDesMin" : 3,

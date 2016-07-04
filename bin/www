@@ -7,12 +7,13 @@
 var app = require('../app');
 var debug = require('debug')('secret_node:server');
 var http = require('http');
+var config = require('../config.json');
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
+var port = config.port;
 app.set('port', port);
 
 /**
@@ -88,3 +89,9 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
+
+
+process.on('uncaughtException', function(err) {
+  // handle the error safely
+  console.log('ERROR - process:'+err);
+});
