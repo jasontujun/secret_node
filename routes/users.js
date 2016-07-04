@@ -145,7 +145,8 @@ router.post('/update', router.checkToken, function(req, res, next) {
         description : req.body.des,
         born_time : req.body.btime,
         email : req.body.email,
-        heritage : req.body.heritage
+        heritage : req.body.heritage,
+        death_threshold : req.body.dt
     };
     dao.updateAccount(userId, info, function(err) {
         if (err) {
