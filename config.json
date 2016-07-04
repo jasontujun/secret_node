@@ -1,0 +1,25 @@
+{
+  "dfsPublicDomain" : "http://o76ab22vz.bkt.clouddn.com/",
+  "dfsSecretDomain" : "http://o776tvrjh.bkt.clouddn.com/",
+  "dfsSecretBucket" : "secretmemory-secret",
+  "dfsPublicBucket" : "secretmemory-public",
+  "qiniuAccessKey" : "29tBiMnDU4dwqlHlM8Zmnvo3uTMcz0jw1pZkesKh",
+  "qiniuSecretKey" : "AqqRMIg1jMmOCAJoyTr4EseeSf18vpDx-k1j_vUP",
+
+  "tokenLifeTime" : 86400000,
+  "aesKeyForSid" : "0123456789abcdef",
+
+  "dbConnectionLimit" : 10,
+  "dbHost" : "localhost",
+  "dbPort" : 3306,
+  "dbUser" : "root",
+  "dbPassword" : "qazsedcft",
+  "dbDatabase" : "sm",
+
+  "userDesMin" : 3,
+  "userDesMax" : 7,
+
+  "deathThresholdMin" : 2592000000,
+  "deathThresholdMax" : 315360000000,
+  "deathThresholdDefault" : 31536000000
+}
